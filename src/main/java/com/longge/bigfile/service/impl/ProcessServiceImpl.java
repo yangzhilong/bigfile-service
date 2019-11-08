@@ -57,9 +57,11 @@ import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 /**
  * @author roger yang
  * @date 10/31/2019
-    1、amazonS3.initiateMultipartUpload(request)
-    2、amazonS3.uploadPart(request);
-    3、amazonS3.completeMultipartUpload(request);
+ * S3 API:
+    1、S3Client.createMultipartUpload
+    2、S3Client.uploadPart
+    3、S3Client.completeMultipartUpload
+    4、S3Client.putObject
  */
 @Service
 @Slf4j
