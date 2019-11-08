@@ -11,3 +11,5 @@ Technical features:
 
 # how use
 download project, run BigfileServiceApplication's main method or mvn spring-boot:run
+
+Visit the page: http://127.0.0.1:10010/index.html
