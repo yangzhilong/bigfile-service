@@ -9,7 +9,7 @@ Technical features:
 
 3, multiple people upload the same file at the same time can be multi-threaded concurrently uploading, speeding up the uploading of large files.
 
-# how use
+# how to use?
 download project, run BigfileServiceApplication's main method or mvn spring-boot:run
 
 Visit the page: http://127.0.0.1:10010/index.html
