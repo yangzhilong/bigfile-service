@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>HTML5大文件分片上传示例</title>
+<title>HTML5 bigFile upload Demo</title>
 <script src="jquery-3.4.1.min.js"></script>
 <script src="spark-md5.min.js"></script>
 <script>
@@ -14,23 +14,23 @@
         },
         
         upload: function(file, start, end, md5) {
-        	//构造一个表单，FormData是HTML5新增的
+        	//FormData is add in HTML5
             var form = new FormData();
-            form.append("file", file.slice(start,end));  //slice方法用于切出文件的一部分
+            form.append("file", file.slice(start,end));  // file slice
             form.append("fileStart", start);
             form.append("fileEnd", end);
             form.append("sys", "cig"); 
             form.append("md5", md5); 
             
-        	//Ajax提交
+        	//Request before uploading
             $.ajax({
                 url: "/v1/api/upload",
                 dataType: "json",
                 type: "POST",
                 data: form,
-                async: true,        //异步
-                processData: false,  //很重要，告诉jquery不要对form进行处理
-                contentType: false,  //很重要，指定为false才能形成正确的Content-Type
+                async: true,        // asynchronous
+                processData: false,  // Tell jquery not to process the form
+                contentType: false,  // Specify false to form the correct Content-Type
                 beforeSend: function() {
                     $("#output").prepend(dateFormat("HH:MM:SS", new Date()) + ": begin upload, start is:" + start + "<br/><br/>");
                 },
@@ -52,9 +52,9 @@
         },
         
         preUpload: function(){
-            var file = $("#file")[0].files[0],  //文件对象
-                name = file.name,        //文件名
-                size = file.size;        //总大小
+            var file = $("#file")[0].files[0],  // upload file 
+                name = file.name,        // file name
+                size = file.size;        // file total size
 
             var jsonData = {
             		sys: "cig",
@@ -79,7 +79,7 @@
                 	if(data.success) {
                 		data = data.data;
                 		
-                		var shardSize = data.sliceSize;    //分片大小
+                		var shardSize = data.sliceSize;    // slice size
                 		
                 		if(data.s3FilePath) {
                 			$("#output").prepend(dateFormat("HH:MM:SS", new Date()) + ": end upload <br/><br/>");
@@ -87,9 +87,9 @@
                             return;
                 		}
                 		
-                		var fileStart = data.fileStart; // 开始切片的地方
-                		var fileEnd = data.fileEnd; // 结束切片的地方
-                		var completionRatio = data.completionRatio; // 已完成比例
+                		var fileStart = data.fileStart; // start slice file index
+                		var fileEnd = data.fileEnd; // end slice file index
+                		var completionRatio = data.completionRatio; // Completed ratio
                 		$("#output").prepend(dateFormat("HH:MM:SS", new Date()) + ": upload ratio ：" + completionRatio*100 +"% <br/><br/>");
                 		page.upload(file, fileStart, fileEnd, md5);
                 	}
@@ -141,13 +141,12 @@
     function dateFormat(fmt, date) {
         let ret;
         let opt = {
-            "Y+": date.getFullYear().toString(),        // 年
-            "m+": (date.getMonth() + 1).toString(),     // 月
-            "d+": date.getDate().toString(),            // 日
-            "H+": date.getHours().toString(),           // 时
-            "M+": date.getMinutes().toString(),         // 分
-            "S+": date.getSeconds().toString()          // 秒
-            // 有其他格式化字符需求可以继续添加，必须转化成字符串
+            "Y+": date.getFullYear().toString(),
+            "m+": (date.getMonth() + 1).toString(),
+            "d+": date.getDate().toString(),
+            "H+": date.getHours().toString(), 
+            "M+": date.getMinutes().toString(),
+            "S+": date.getSeconds().toString()
         };
         for (let k in opt) {
             ret = new RegExp("(" + k + ")").exec(fmt);
@@ -162,13 +161,13 @@
 
 <body>
     <div>
-        <h2>大文件分片上传DEMO</h2>
-        <h3>支持断点续传、已上传文件的秒传</h3>
+        <h2>Big file slice upload DEMO</h2>
+        <h3>Support for resumes of resumes and seconds of uploaded files</h3>
         <h4><a href="md5.html" target="_blank">md5 generate demo</a></h4>
     </div>
 	<input type="file" id="file" />
-	<button id="upload">上传</button><br />
-	<label for="url">上传的结果：</label><input name="url" id="url" readonly="readonly" style="width:400px"/><button id="download">下载</button>
+	<button id="upload">upload</button><br />
+	<label for="url">upload result：</label><input name="url" id="url" readonly="readonly" style="width:400px"/><button id="download">download</button>
 	<div id="output" style="background-color: #000000; color: #FFFFFF; max-height: 500px; overflow: scroll;"></div>
 	<pre id=log></pre>
 	<iframe id="downloadFrame" height="0" width="0" style="border: 0"></iframe>
