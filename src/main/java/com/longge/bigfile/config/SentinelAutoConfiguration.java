@@ -36,6 +36,7 @@ public class SentinelAutoConfiguration {
             // Set limit QPS
             rule.setCount(item.getValue());
             rule.setStrategy(RuleConstant.STRATEGY_DIRECT);
+            rule.setControlBehavior(RuleConstant.CONTROL_BEHAVIOR_DEFAULT);
             rules.add(rule);
         });
         FlowRuleManager.loadRules(rules);
