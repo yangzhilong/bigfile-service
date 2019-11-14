@@ -18,9 +18,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.alibaba.csp.sentinel.Entry;
+import com.alibaba.csp.sentinel.SphU;
+import com.alibaba.csp.sentinel.slots.block.BlockException;
 import com.alibaba.fastjson.JSONObject;
 import com.longge.bigfile.common.GlobalResponse;
 import com.longge.bigfile.config.AmazonS3Configuration.S3Config;
+import com.longge.bigfile.constant.ErrorConstants;
 import com.longge.bigfile.dto.request.PostUploadRequestDto;
 import com.longge.bigfile.dto.request.PreUploadRequestDto;
 import com.longge.bigfile.dto.response.UploadResponseDto;
@@ -59,11 +63,23 @@ public class ProcessRest {
         return resp;
     }
     
+    /**
+     * 
+     * @param file
+     * @param dto
+     * @return
+     */
     @PostMapping(value="/upload", produces = {MediaType.APPLICATION_JSON_VALUE}, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public GlobalResponse<UploadResponseDto> postUpload(@RequestParam(value="file", required = true) MultipartFile file, @Valid PostUploadRequestDto dto) {
         log.info("begin to upload file, request is:{}", JSONObject.toJSONString(dto));
+        GlobalResponse<UploadResponseDto> resp = null;
         
-        GlobalResponse<UploadResponseDto> resp = processService.postUpload(file, dto);
+        try(Entry entry = SphU.entry("ProcessRest_postUpload");) {
+            resp = processService.postUpload(file, dto);
+        } catch (BlockException  e) {
+            log.warn("the system is busy, please try again later");
+            resp = GlobalResponse.buildFail(ErrorConstants.SYSTEM_BUSY);
+        }
         
         log.info("end upload file, response is:{}", JSONObject.toJSONString(resp));
         return resp;

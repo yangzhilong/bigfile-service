@@ -16,7 +16,7 @@ public class RedisConfiguration {
     private StringRedisTemplate stringRedisTemplate;
     
     @Bean
-    public RedisBootstrap test() {
+    public RedisBootstrap redis() {
         RedisUtils.setRedisTemplate(stringRedisTemplate);
         return new RedisBootstrap();
     }

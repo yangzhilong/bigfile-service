@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public enum ErrorConstants implements BaseConstant<Integer> {
     SUCCESS(200, "Success"),
+    SYSTEM_BUSY(10001, "the system is busy, please try again later"),
     
     INIT_S3_UPLOAD_ERROR(30001, "Init s3 upload fail, please contact the relevant personnel"),
     UPLOAD_S3_ERROR(30002,"Upload fail, please contact the relevant personnel"),

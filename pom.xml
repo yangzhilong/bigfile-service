@@ -23,6 +23,7 @@
 		<swagger.version>2.7.0</swagger.version>
 		<redisson.version>3.11.5</redisson.version>
 		<s3.version>2.10.12</s3.version>
+		<sentinel.version>2.1.0.RELEASE</sentinel.version>
 	</properties>
 
 	<dependencyManagement>
@@ -92,6 +93,12 @@
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-starter-sleuth</artifactId>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.alibaba.cloud</groupId>
+			<artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
+		    <version>${sentinel.version}</version>
 		</dependency>
 
 		<dependency>
