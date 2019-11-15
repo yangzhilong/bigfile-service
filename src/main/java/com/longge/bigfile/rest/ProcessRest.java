@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.alibaba.csp.sentinel.Entry;
 import com.alibaba.csp.sentinel.SphU;
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.alibaba.csp.sentinel.slots.block.BlockException;
 import com.alibaba.fastjson.JSONObject;
 import com.longge.bigfile.common.GlobalResponse;
@@ -28,6 +29,7 @@ import com.longge.bigfile.constant.ErrorConstants;
 import com.longge.bigfile.dto.request.PostUploadRequestDto;
 import com.longge.bigfile.dto.request.PreUploadRequestDto;
 import com.longge.bigfile.dto.response.UploadResponseDto;
+import com.longge.bigfile.handler.ProcessBlockHandler;
 import com.longge.bigfile.service.ProcessService;
 import com.longge.bigfile.util.RedisKeyUtils;
 import com.longge.bigfile.util.RedisUtils;
@@ -54,6 +56,7 @@ public class ProcessRest {
     private S3Config s3Config;
     
     @PostMapping("/pre")
+    @SentinelResource(value = "ProcessRest_pre", blockHandlerClass = ProcessBlockHandler.class, blockHandler = "preUpload")
     public GlobalResponse<UploadResponseDto> preUpload(@RequestBody @Valid PreUploadRequestDto dto) {
         log.info("begin call preUpload, request is : {}", JSONObject.toJSONString(dto));
         
