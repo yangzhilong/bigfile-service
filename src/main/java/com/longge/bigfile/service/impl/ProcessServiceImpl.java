@@ -41,6 +41,7 @@ import com.longge.bigfile.util.RedisUtils;
 import com.longge.bigfile.util.SliceUtils;
 
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
@@ -76,25 +77,25 @@ public class ProcessServiceImpl implements ProcessService {
     private S3Config s3Config;
 
     @Override
-    public GlobalResponse<UploadResponseDto> preUpload(PreUploadRequestDto dto) {
+    public Mono<GlobalResponse<UploadResponseDto>> preUpload(PreUploadRequestDto dto) {
         RLock lock = redissonClient.getLock(RedisKeyUtils.getFileLock(dto));
         boolean lockFlag = false;
         try {
             lockFlag = lock.tryLock(5, bigfileConfig.getFileLockTimeOutSecond(), TimeUnit.SECONDS);
             if(!lockFlag) {
                 log.warn("Another person is uploading， MD5 is :{}", dto.getMd5());
-                return GlobalResponse.buildFail(ErrorConstants.FILE_IS_UPLOADING_ERROR);
+                return Mono.just(GlobalResponse.buildFail(ErrorConstants.FILE_IS_UPLOADING_ERROR));
             }
             
             String hashRedisKey = RedisKeyUtils.getBigFileInfoHashKey(dto);
             // if hasKey, this file is not first upload
             if (RedisUtils.hasKey(hashRedisKey)) {
-                return secondPreUpload(dto, hashRedisKey);
+                return Mono.just(secondPreUpload(dto, hashRedisKey));
             }
-            return initPreUpload(dto, hashRedisKey);
+            return Mono.just(initPreUpload(dto, hashRedisKey));
         } catch (InterruptedException e) {
             log.error("redis lock is interrupted", e);
-            return GlobalResponse.buildFail(ErrorConstants.FILE_IS_UPLOADING_ERROR);
+            return Mono.just(GlobalResponse.buildFail(ErrorConstants.FILE_IS_UPLOADING_ERROR));
         } finally {
             if(lockFlag) {
                 lock.unlock();
@@ -103,7 +104,7 @@ public class ProcessServiceImpl implements ProcessService {
     }
 
     @Override
-    public GlobalResponse<UploadResponseDto> postUpload(MultipartFile file, PostUploadRequestDto dto) {
+    public Mono<GlobalResponse<UploadResponseDto>> postUpload(MultipartFile file, PostUploadRequestDto dto) {
         String hashRedisKey = RedisKeyUtils.getBigFileInfoHashKey(dto);
         Map<String, String> hashValues = RedisUtils.hashGetAll(hashRedisKey);
         
@@ -113,7 +114,7 @@ public class ProcessServiceImpl implements ProcessService {
         ErrorConstants checkResult = checkUpload(file, dto, hashValues);
         if(!ErrorConstants.SUCCESS.equals(checkResult)) {
             log.error("check upload fail, result is:{}", checkResult.getDesc());
-            return GlobalResponse.buildFail(checkResult);
+            return Mono.just(GlobalResponse.buildFail(checkResult));
         }
         
         long sliceSize = getSliceSizeFromMap(hashValues);
@@ -123,7 +124,7 @@ public class ProcessServiceImpl implements ProcessService {
         Double score = RedisUtils.zScore(waitRedisKey, String.valueOf(sliceIndex));
         if(null == score) {
             log.warn("Another person is uploading， MD5 is :{}, slice index is:{}, return next slice to upload", dto.getMd5(), sliceIndex);
-            return uploadNextSlice(waitRedisKey, hashRedisKey, hashValues, sliceIndex);
+            return Mono.just(uploadNextSlice(waitRedisKey, hashRedisKey, hashValues, sliceIndex));
         }
         
         log.info("check success, begin process upload");
@@ -134,13 +135,13 @@ public class ProcessServiceImpl implements ProcessService {
             lockFlag = sliceLock.tryLock(1, bigfileConfig.getSliceLockTimeOutSecond(), TimeUnit.SECONDS);
             if(!lockFlag) {
                 log.warn("Another person is uploading， MD5 is :{}, slice index is:{}", dto.getMd5(), sliceIndex);
-                return uploadNextSlice(waitRedisKey, hashRedisKey, hashValues, sliceIndex);
+                return Mono.just(uploadNextSlice(waitRedisKey, hashRedisKey, hashValues, sliceIndex));
             }
             // double check
             score = RedisUtils.zScore(waitRedisKey, String.valueOf(sliceIndex));
             if(null == score) {
                 log.warn("Another person is upload end， MD5 is :{}, slice index is:{}, return next slice to upload", dto.getMd5(), sliceIndex);
-                return uploadNextSlice(waitRedisKey, hashRedisKey, hashValues, sliceIndex);
+                return Mono.just(uploadNextSlice(waitRedisKey, hashRedisKey, hashValues, sliceIndex));
             }
             
             Long totalSlice = getTotalSliceFromMap(hashValues);
@@ -150,12 +151,12 @@ public class ProcessServiceImpl implements ProcessService {
             // upload temp file/only one slice file to s3
             String eTag = uploadFileToS3(file, s3File, totalSlice, uploadId, sliceIndex);
             if(StringUtils.isBlank(eTag)) {
-                return GlobalResponse.buildFail(ErrorConstants.UPLOAD_S3_ERROR);
+                return Mono.just(GlobalResponse.buildFail(ErrorConstants.UPLOAD_S3_ERROR));
             }
             
             if(1 == totalSlice) {
                 // only one slice
-                return processOnlyOneSlice(hashRedisKey, waitRedisKey, s3File, sliceIndex);
+                return Mono.just(processOnlyOneSlice(hashRedisKey, waitRedisKey, s3File, sliceIndex));
             }
             
             // add to redis uploaded eTag set
@@ -173,14 +174,14 @@ public class ProcessServiceImpl implements ProcessService {
             
             long waitSize = RedisUtils.zSize(waitRedisKey);
             if(1 == waitSize) {
-                return lastPartUpload(hashValues, endRedisKey, uploadId, hashRedisKey, waitRedisKey, sliceIndex);
+                return Mono.just(lastPartUpload(hashValues, endRedisKey, uploadId, hashRedisKey, waitRedisKey, sliceIndex));
             }
             // remove redis wait set
             RedisUtils.zRemove(waitRedisKey, String.valueOf(sliceIndex));
-            return uploadNextSlice(waitRedisKey, hashRedisKey, hashValues, sliceIndex);
+            return Mono.just(uploadNextSlice(waitRedisKey, hashRedisKey, hashValues, sliceIndex));
         } catch (InterruptedException e) {
             log.warn("redis lock is interrupted", e);
-            return GlobalResponse.buildFail(ErrorConstants.UPLOAD_S3_ERROR);
+            return Mono.just(GlobalResponse.buildFail(ErrorConstants.UPLOAD_S3_ERROR));
         } finally {
             if(lockFlag) {
                 sliceLock.unlock();

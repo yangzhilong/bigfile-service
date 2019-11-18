@@ -35,6 +35,7 @@ import com.longge.bigfile.util.RedisKeyUtils;
 import com.longge.bigfile.util.RedisUtils;
 
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -57,10 +58,10 @@ public class ProcessRest {
     
     @PostMapping("/pre")
     @SentinelResource(value = "ProcessRest_pre", blockHandlerClass = ProcessBlockHandler.class, blockHandler = "preUpload")
-    public GlobalResponse<UploadResponseDto> preUpload(@RequestBody @Valid PreUploadRequestDto dto) {
+    public Mono<GlobalResponse<UploadResponseDto>> preUpload(@RequestBody @Valid PreUploadRequestDto dto) {
         log.info("begin call preUpload, request is : {}", JSONObject.toJSONString(dto));
         
-        GlobalResponse<UploadResponseDto> resp = processService.preUpload(dto);
+        Mono<GlobalResponse<UploadResponseDto>> resp = processService.preUpload(dto);
         
         log.info("end call preUpload, response is : {}", JSONObject.toJSONString(resp));
         return resp;
@@ -73,15 +74,15 @@ public class ProcessRest {
      * @return
      */
     @PostMapping(value="/upload", produces = {MediaType.APPLICATION_JSON_VALUE}, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public GlobalResponse<UploadResponseDto> postUpload(@RequestParam(value="file", required = true) MultipartFile file, @Valid PostUploadRequestDto dto) {
+    public Mono<GlobalResponse<UploadResponseDto>> postUpload(@RequestParam(value="file", required = true) MultipartFile file, @Valid PostUploadRequestDto dto) {
         log.info("begin to upload file, request is:{}", JSONObject.toJSONString(dto));
-        GlobalResponse<UploadResponseDto> resp = null;
+        Mono<GlobalResponse<UploadResponseDto>> resp = null;
         
         try(Entry entry = SphU.entry("ProcessRest_postUpload");) {
             resp = processService.postUpload(file, dto);
         } catch (BlockException  e) {
             log.warn("the system is busy, please try again later");
-            resp = GlobalResponse.buildFail(ErrorConstants.SYSTEM_BUSY);
+            resp = Mono.just(GlobalResponse.buildFail(ErrorConstants.SYSTEM_BUSY));
         }
         
         log.info("end upload file, response is:{}", JSONObject.toJSONString(resp));
