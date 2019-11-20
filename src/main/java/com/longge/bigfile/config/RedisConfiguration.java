@@ -1,7 +1,6 @@
  package com.longge.bigfile.config;
 
-import javax.annotation.Resource;
-
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
@@ -12,7 +11,7 @@ import com.longge.bigfile.util.RedisUtils;
  * @date 10/31/2019
  */
 public class RedisConfiguration {
-    @Resource
+    @Autowired
     private StringRedisTemplate stringRedisTemplate;
     
     @Bean

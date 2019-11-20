@@ -44,6 +44,6 @@ public class AmazonS3Configuration {
 	    
 	    private String secretAccessKey;
 	    
-	    private String region;
+	    private String region = "cn-north-1";
 	}
 }
