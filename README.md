@@ -13,6 +13,7 @@ Technical features:
 4. Spring webflux replaced Spring mvc
 
 5. Sentinel is used for current limiting
+Sentinel with nacos can see: https://github.com/yangzhilong/nacos-client
 
 # how to use?
 download project, run BigfileServiceApplication's main method or mvn spring-boot:run
