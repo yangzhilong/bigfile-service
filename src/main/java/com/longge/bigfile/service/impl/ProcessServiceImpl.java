@@ -162,7 +162,7 @@ public class ProcessServiceImpl implements ProcessService {
             // add to redis uploaded eTag set
             String endRedisKey = RedisKeyUtils.getEndSliceKey(dto);
             
-            RedisUtils.getStringRedisTemplate().execute(new RedisCallback<String>() {
+            RedisUtils.getStringRedisTemplate().executePipelined(new RedisCallback<String>() {
                 @Override
                 public String doInRedis(RedisConnection connection) throws DataAccessException {
                     connection.multi();
@@ -292,7 +292,7 @@ public class ProcessServiceImpl implements ProcessService {
     }
     
     private GlobalResponse<UploadResponseDto> processOnlyOneSlice(String hashRedisKey, String waitRedisKey, String s3File, Integer sliceIndex) {
-        RedisUtils.getStringRedisTemplate().execute(new RedisCallback<String>() {
+        RedisUtils.getStringRedisTemplate().executePipelined(new RedisCallback<String>() {
             @Override
             public String doInRedis(RedisConnection connection) throws DataAccessException {
                 connection.multi();
@@ -336,7 +336,7 @@ public class ProcessServiceImpl implements ProcessService {
             return GlobalResponse.buildFail(ErrorConstants.COMPLETE_S3_ERROR);
         }
         
-        RedisUtils.getStringRedisTemplate().execute(new RedisCallback<String>() {
+        RedisUtils.getStringRedisTemplate().executePipelined(new RedisCallback<String>() {
             @Override
             public String doInRedis(RedisConnection connection) throws DataAccessException {
                 connection.multi();
@@ -412,7 +412,7 @@ public class ProcessServiceImpl implements ProcessService {
         
         String waitRedisKey = RedisKeyUtils.getWaitSliceKey(dto);
         
-        RedisUtils.getStringRedisTemplate().execute(new RedisCallback<String>() {
+        RedisUtils.getStringRedisTemplate().executePipelined(new RedisCallback<String>() {
             @Override
             public String doInRedis(RedisConnection connection) throws DataAccessException {
                 connection.multi();
