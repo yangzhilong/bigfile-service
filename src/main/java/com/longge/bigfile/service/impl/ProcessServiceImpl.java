@@ -169,7 +169,7 @@ public class ProcessServiceImpl implements ProcessService {
                     connection.zAdd(endRedisKey.getBytes(), sliceIndex, eTag.getBytes());
                     connection.expire(endRedisKey.getBytes(), bigfileConfig.getRedisTimeOutSecond());
                     connection.exec();
-                    return "ok";
+                    return null;
                 }});
             
             long waitSize = RedisUtils.zSize(waitRedisKey);
@@ -299,7 +299,7 @@ public class ProcessServiceImpl implements ProcessService {
                 connection.hSet(hashRedisKey.getBytes(), RedisKeyUtils.S3_PATH.getBytes(), s3File.getBytes());
                 connection.zRem(waitRedisKey.getBytes(), String.valueOf(sliceIndex).getBytes());
                 connection.exec();
-                return "ok";
+                return null;
             }});
         UploadResponseDto respDto = UploadResponseDto.builder()
             .completionRatio(1f)
@@ -343,7 +343,7 @@ public class ProcessServiceImpl implements ProcessService {
                 connection.hSet(hashRedisKey.getBytes(), RedisKeyUtils.S3_PATH.getBytes(), s3RealFile.getBytes());
                 connection.zRem(waitRedisKey.getBytes(), String.valueOf(sliceIndex).getBytes());
                 connection.exec();
-                return "ok";
+                return null;
             }});
         return GlobalResponse.buildSuccess(UploadResponseDto.builder().completionRatio(1f).s3FilePath(s3RealFile).build());
     }
@@ -422,7 +422,7 @@ public class ProcessServiceImpl implements ProcessService {
                 connection.hashCommands().hMSet(hashRedisKey.getBytes(), map);
                 connection.expire(hashRedisKey.getBytes(), bigfileConfig.getRedisTimeOutSecond());
                 connection.exec();
-                return "ok";
+                return null;
             }});
         
         UploadResponseDto respDto = UploadResponseDto.builder().fileStart(split[0]).fileEnd(split[1]).sliceSize(bigfileConfig.getSliceSize()).completionRatio(0f).build();
