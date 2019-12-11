@@ -6,6 +6,7 @@
 <script src="jquery-3.4.1.min.js"></script>
 <script src="spark-md5.min.js"></script>
 <script>
+	var sys = "test";
     var md5 = "";
     var page = {
         md5: "",
@@ -19,7 +20,7 @@
             form.append("file", file.slice(start,end));  // file slice
             form.append("fileStart", start);
             form.append("fileEnd", end);
-            form.append("sys", "cig"); 
+            form.append("sys", sys); 
             form.append("md5", md5); 
             
             //Request before uploading
@@ -61,7 +62,7 @@
                 size = file.size;        // file total size
 
             var jsonData = {
-                    sys: "cig",
+                    sys: sys,
                     md5: md5,
                     fileName: name,
                     totalSize: size

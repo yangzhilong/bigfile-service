@@ -1,6 +1,5 @@
  package com.longge.bigfile.rest;
 
-import javax.annotation.Resource;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
@@ -24,7 +23,6 @@ import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.alibaba.csp.sentinel.slots.block.BlockException;
 import com.alibaba.fastjson.JSONObject;
 import com.longge.bigfile.common.GlobalResponse;
-import com.longge.bigfile.config.AmazonS3Configuration.S3Config;
 import com.longge.bigfile.constant.ErrorConstants;
 import com.longge.bigfile.dto.request.PostUploadRequestDto;
 import com.longge.bigfile.dto.request.PreUploadRequestDto;
@@ -33,11 +31,11 @@ import com.longge.bigfile.handler.ProcessBlockHandler;
 import com.longge.bigfile.service.ProcessService;
 import com.longge.bigfile.util.RedisKeyUtils;
 import com.longge.bigfile.util.RedisUtils;
+import com.longge.bigfile.util.S3ClientUtils;
 
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.core.ResponseInputStream;
-import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
@@ -51,10 +49,6 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 public class ProcessRest {
     @Autowired
     private ProcessService processService;
-    @Resource
-    private S3Client s3Client;
-    @Resource
-    private S3Config s3Config;
     
     @PostMapping("/pre")
     @SentinelResource(value = "ProcessRest_pre", blockHandlerClass = ProcessBlockHandler.class, blockHandler = "preUpload")
@@ -96,9 +90,9 @@ public class ProcessRest {
         if(StringUtils.isBlank(fileName)) {
             response.setStatus(HttpStatus.NOT_FOUND.value());
         } else {
-            GetObjectRequest objRequest = GetObjectRequest.builder().bucket(s3Config.getBucketName()).key(file).build();
+            GetObjectRequest objRequest = GetObjectRequest.builder().bucket(S3ClientUtils.getConfig(sys).getBucketName()).key(file).build();
             try(ServletOutputStream out = response.getOutputStream(); 
-                ResponseInputStream<GetObjectResponse> is = s3Client.getObject(objRequest);) {
+                ResponseInputStream<GetObjectResponse> is = S3ClientUtils.getClient(sys).getObject(objRequest);) {
                 response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=" + fileName);
                 response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
                 response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "Content-Disposition,Content-Length");

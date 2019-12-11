@@ -11,8 +11,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Resource;
-
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -38,6 +36,7 @@ import com.longge.bigfile.util.FileUtils;
 import com.longge.bigfile.util.ForEachUtils;
 import com.longge.bigfile.util.RedisKeyUtils;
 import com.longge.bigfile.util.RedisUtils;
+import com.longge.bigfile.util.S3ClientUtils;
 import com.longge.bigfile.util.SliceUtils;
 
 import lombok.extern.slf4j.Slf4j;
@@ -71,10 +70,9 @@ public class ProcessServiceImpl implements ProcessService {
     private RedissonClient redissonClient;
     @Autowired
     private BigfileConfig bigfileConfig;
-    @Resource
-    private S3Client s3Client;
-    @Resource
-    private S3Config s3Config;
+    
+    private static ThreadLocal<S3Client> clientLocal = new ThreadLocal<>();
+    private static ThreadLocal<S3Config> configLocal = new ThreadLocal<>();
 
     @Override
     public Mono<GlobalResponse<UploadResponseDto>> preUpload(PreUploadRequestDto dto) {
@@ -92,6 +90,12 @@ public class ProcessServiceImpl implements ProcessService {
             if (RedisUtils.hasKey(hashRedisKey)) {
                 return Mono.just(secondPreUpload(dto, hashRedisKey));
             }
+            
+            S3Client s3Client = S3ClientUtils.getClient(dto.getSys());
+            clientLocal.set(s3Client);
+            S3Config s3Config = S3ClientUtils.getConfig(dto.getSys());
+            configLocal.set(s3Config);
+            
             return Mono.just(initPreUpload(dto, hashRedisKey));
         } catch (InterruptedException e) {
             log.error("redis lock is interrupted", e);
@@ -100,6 +104,8 @@ public class ProcessServiceImpl implements ProcessService {
             if(lockFlag) {
                 lock.unlock();
             }
+            clientLocal.remove();
+            configLocal.remove();
         }
     }
 
@@ -144,6 +150,11 @@ public class ProcessServiceImpl implements ProcessService {
                 return Mono.just(uploadNextSlice(waitRedisKey, hashRedisKey, hashValues, sliceIndex));
             }
             
+            S3Client s3Client = S3ClientUtils.getClient(dto.getSys());
+            clientLocal.set(s3Client);
+            S3Config s3Config = S3ClientUtils.getConfig(dto.getSys());
+            configLocal.set(s3Config);
+            
             Long totalSlice = getTotalSliceFromMap(hashValues);
             String uploadId = getS3UploadIdFromMap(hashValues);
             // s3 file path
@@ -186,6 +197,8 @@ public class ProcessServiceImpl implements ProcessService {
             if(lockFlag) {
                 sliceLock.unlock();
             }
+            clientLocal.remove();
+            configLocal.remove();
         }
     }
     
@@ -257,11 +270,11 @@ public class ProcessServiceImpl implements ProcessService {
     private String uploadRealFileToS3(MultipartFile file, String s3File) {
         try (InputStream is = file.getInputStream(); ){
             PutObjectRequest puRequest = PutObjectRequest.builder()
-                .bucket(s3Config.getBucketName())
+                .bucket(configLocal.get().getBucketName())
                 .key(s3File)
                 .build();
             RequestBody reqBody = RequestBody.fromInputStream(is, file.getSize());
-            PutObjectResponse result = s3Client.putObject(puRequest, reqBody);
+            PutObjectResponse result = clientLocal.get().putObject(puRequest, reqBody);
             
             if(!Objects.isNull(result)) {
                 return result.eTag();
@@ -275,13 +288,13 @@ public class ProcessServiceImpl implements ProcessService {
     private String uploadPartFileToS3(MultipartFile file, String s3File, Long totalSlice, String uploadId, int sliceIndex) {
         try(InputStream is = file.getInputStream();) {
             UploadPartRequest request = UploadPartRequest.builder()
-                .bucket(s3Config.getBucketName())
+                .bucket(configLocal.get().getBucketName())
                 .key(s3File)
                 .partNumber(sliceIndex+1)
                 .uploadId(uploadId)
                 .build();
             
-            UploadPartResponse result = s3Client.uploadPart(request, RequestBody.fromInputStream(is, file.getSize()));
+            UploadPartResponse result = clientLocal.get().uploadPart(request, RequestBody.fromInputStream(is, file.getSize()));
             if(!Objects.isNull(result)) {
                 return result.eTag();
             }
@@ -321,13 +334,13 @@ public class ProcessServiceImpl implements ProcessService {
         });
         CompletedMultipartUpload completedMultipartUpload = CompletedMultipartUpload.builder().parts(parts).build();
         CompleteMultipartUploadRequest request = CompleteMultipartUploadRequest.builder()
-            .bucket(s3Config.getBucketName())
+            .bucket(configLocal.get().getBucketName())
             .key(s3RealFile)
             .uploadId(uploadId)
             .multipartUpload(completedMultipartUpload)
             .build();
         try {
-            CompleteMultipartUploadResponse result = s3Client.completeMultipartUpload(request);
+            CompleteMultipartUploadResponse result = clientLocal.get().completeMultipartUpload(request);
             if(Objects.isNull(result) || StringUtils.isBlank(result.eTag())) {
                 return GlobalResponse.buildFail(ErrorConstants.COMPLETE_S3_ERROR);
             }
@@ -378,9 +391,9 @@ public class ProcessServiceImpl implements ProcessService {
             try {
                 String realKey = FileUtils.getS3RealFilePath(dto.getMd5());
                 CreateMultipartUploadRequest createMultipartUploadRequest = CreateMultipartUploadRequest.builder()
-                    .bucket(s3Config.getBucketName()).key(realKey)
+                    .bucket(configLocal.get().getBucketName()).key(realKey)
                     .build();
-                CreateMultipartUploadResponse initResp  = s3Client.createMultipartUpload(createMultipartUploadRequest);
+                CreateMultipartUploadResponse initResp  = clientLocal.get().createMultipartUpload(createMultipartUploadRequest);
                 if(null == initResp  || StringUtils.isBlank(initResp.uploadId())) {
                     return GlobalResponse.buildFail(ErrorConstants.INIT_S3_UPLOAD_ERROR);
                 }
