@@ -20,7 +20,7 @@
 		<spring-cloud.version>Greenwich.SR1</spring-cloud.version>
 		<maven-jar-plugin.version>3.1.1</maven-jar-plugin.version>
 		<fastjson.version>1.2.60</fastjson.version>
-		<swagger.version>2.7.0</swagger.version>
+		<swagger.version>2.10.0</swagger.version>
 		<redisson.version>3.11.5</redisson.version>
 		<s3.version>2.10.12</s3.version>
 		<sentinel.version>2.1.0.RELEASE</sentinel.version>
